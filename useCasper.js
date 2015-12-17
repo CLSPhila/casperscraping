@@ -2,22 +2,35 @@ var nameInfo = {lastName: "Smith", firstName: "John"}
 
 var nameControls = {lastName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$lastNameControl",
                     firstName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$firstNameControl"}
+var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 
+function writeHTMLToFile(file, data)
+{
+    var fs = require('fs');
+    fs.write(file, data, 'w');
+}
 
+/*
 var casper = require("casper").create({
 	verbose:true,
-	logLevel: 'debug'
+	logLevel:"debug"
 });
+*/
+
+casper.options.waitTimeout = 20000; 
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
-    this.test.assertExists("select[name='ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl'], 'Selector exists'");
+    // writeHTMLToFile("page1.html", this.getPageContent());
+    this.test.assertExists("select[name='"+searchTypeListControl+"']",
+"Search type selector exists");
+      
     //so I need to change the "selected" attribute of the options list and then evaluate the __doPostBack method of the options list.
     works = this.evaluate(function() {
-        var element = jQuery("[name='ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl']");
+        var element = jQuery("[name='"+searchTypeListControl+"']");
         var selectedElement = jQuery("option:selected", element).removeAttr("selected");
         var participantElement = jQuery("option:contains('Participant')",element);
         participantElement.attr("selected","selected");
-        setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl\',\'\')', 0);
+        setTimeout('__doPostBack(\''+searchTypeListControl+'\',\'\')', 0);
     });//end of this.evaluate
 });//end of casper.start
 
@@ -46,7 +59,10 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     }, //end of waitForSelector onTimout function
     20000);
 
-casper.run()
+casper.run(function() {
+    require('utils').dump(casper.test.getFailures());
+    this.exit();
+});
 
 
 
