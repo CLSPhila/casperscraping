@@ -1,7 +1,8 @@
 // test data
 var nameInfo = {lastName: "Smith", 
                 firstName: "John",
-                DOB: "08/29/1985"};
+                DOB: "08/29/1985",
+                numRecords: 23};
 
 // field names
 var nameControls = {lastName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$lastNameControl",
@@ -14,6 +15,10 @@ var buttonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent
 
 var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 var participantSelect = "Aopc.Cp.Views.DocketSheets.IParticipantSearchView, CPCMSApplication, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
+var docketNumberLabelId = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_caseList_ctl00_ctl00_docketNumberLabel"
+
+//TODO: Global namespace pollution, a smidge. Once we know all the selectors we need,
+//      then mayhap it'd be useful to put all this into some kind of nested literal bject. 
 
 function writeHTMLToFile(file, data)
 {
@@ -30,6 +35,7 @@ var casper = require("casper").create({
 
 //casper.options.waitTimeout = 20000; 
 casper.options.verbose = true;
+casper.options.logLeval = "debug";
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
     // writeHTMLToFile("page1.html", this.getPageContent());
@@ -52,7 +58,6 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
     this.test.assertExists("[name='"+nameControls.lastName+"']")
     
     this.evaluate(function searchByNameDOB(aFirstName, aLastName, aDOB, aFirstNameField, aLastNameField, aDOBField, aStartField, aEndField, aButtonField){
-
         // put in the last name
         var lastNameSelector = "input[name='"+aLastNameField+"']"
         jQuery(lastNameSelector).val(aLastName);
@@ -88,6 +93,35 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
         var docketNumbers = casper.getElementsAttribute("span[id$='docketNumberLabel']", "innerHTML");
         require('utils').dump(docketNumbers);
         this.capture("02.png");
+        // scrape docket numbers from each page
+        //TODO: consider doing this loop outside of the .waitforselector callback. 
+        //      It could, instead, be a loop of casper.then(callback) functions.
+        var spans = this.evaluate(function() {
+            var spanCollector = []
+            //for preventing infinite loops
+            var numPages = 1
+            var maxPages = 5
+            do {
+                var tempSpans = jQuery("[id*='docketNumberLabel']").map(function(index, span) {return jQuery(span).text()})
+                //tempSpans is a "pseudoarray", so doesn't have nice array methods like "join", so use $.makeArray
+                spanCollector = spanCollector.concat(jQuery.makeArray(tempSpans))
+                
+                //if there's another page, go to it.
+                // The next link will have an href value if its active, and a attribute "disabled" that equals "disabled" if
+                // there is no next page. 
+                var hasMorePages = false;
+                if (jQuery("a[href*='casePager$ctl07']").length > 0) {
+                    hasMorePages = true;
+                    numPages += 1
+                    setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
+                }
+            } while (hasMorePages && numPages <= maxPages) //end do while
+            return spanCollector
+        })//end of .evaluate
+        console.log("Spans?");
+        console.log(spans.join(", "))
+        this.test.assert(spans.length===nameInfo.numRecords, "spans is length " + spans.length + 
+                            " but is should be " + nameInfo.numRecords);
     }, //end of waitForSelector then function)
     function() {
         this.capture("02.png");
@@ -102,6 +136,5 @@ casper.run(function() {
 
 
 
-//javascript:setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl\',\'\')', 0)
 
 
