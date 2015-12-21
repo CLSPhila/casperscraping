@@ -80,8 +80,13 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
 });
 
 casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel']",
-    function()  {
+    function getDocketNumbers()  {
         console.log("Found selector.")
+        writeHTMLToFile("page3.html", this.getPageContent());
+        
+        // find all of the docketnumbers; id$= is a wildcard search that finds any id ending with docketNumberLable
+        var docketNumbers = casper.getElementsAttribute("span[id$='docketNumberLabel']", "innerHTML");
+        require('utils').dump(docketNumbers);
         this.capture("02.png");
     }, //end of waitForSelector then function)
     function() {
