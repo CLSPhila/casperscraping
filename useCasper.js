@@ -14,6 +14,10 @@ var buttonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent
 
 var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 var participantSelect = "Aopc.Cp.Views.DocketSheets.IParticipantSearchView, CPCMSApplication, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
+var docketNumberLabelId = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_caseList_ctl00_ctl00_docketNumberLabel"
+
+//TODO: Global namespace pollution, a smidge. Once we know all the selectors we need,
+//      then mayhap it'd be useful to put all this into some kind of nested literal bject. 
 
 function writeHTMLToFile(file, data)
 {
@@ -30,6 +34,7 @@ var casper = require("casper").create({
 
 //casper.options.waitTimeout = 20000; 
 casper.options.verbose = true;
+casper.options.logLeval = "debug";
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
     // writeHTMLToFile("page1.html", this.getPageContent());
@@ -83,6 +88,18 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     function()  {
         console.log("Found selector.")
         this.capture("02.png");
+        // scrape docket numbers from each page
+        //TODO: consider doing this loop outside of the .waitforselector callback. 
+        //      It could, instead, be a loop of casper.then(callback) functions.
+        var spans = this.evaluate(function() {
+            do {
+                var spans = jQuery("[id*='docketNumberLabel']").map(function(index, span) {return jQuery(span).text()})
+                //whattdayaknow, but spans is a "pseudoarray", so doesn't have nice array methods like "join"
+                return jQuery.makeArray(spans).join(", ");
+            } while (1===2) //end do while
+        })//end of .evaluate
+        console.log("Spans?");
+        console.log(spans)
     }, //end of waitForSelector then function)
     function() {
         this.capture("02.png");
