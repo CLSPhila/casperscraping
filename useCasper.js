@@ -16,7 +16,7 @@ var buttonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent
 var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 var participantSelect = "Aopc.Cp.Views.DocketSheets.IParticipantSearchView, CPCMSApplication, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
 var docketNumberLabelId = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_caseList_ctl00_ctl00_docketNumberLabel"
-
+var aDocketInfo = [new Array(), new Array(), new Array(), new Array()]
 //TODO: Global namespace pollution, a smidge. Once we know all the selectors we need,
 //      then mayhap it'd be useful to put all this into some kind of nested literal bject. 
 
@@ -33,13 +33,13 @@ function getCaseInformation()
     var tmpStatus = casper.getElementsInfo("span[id$='caseStatusNameLabel']");                              
     var tmpOTN = casper.getElementsInfo("span[id$='otnLabel']");                                            
     var tmpDOB = casper.getElementsInfo("span[id$='primaryParticipantDobLabel']");                          
-    var aDocketInfo = new Array(tmpDocketNumbers.map(function(value,index) { return value['text'];}));      
-    aDocketInfo.push(tmpStatus.map(function(value,index) { return value['text'];}));                        
-    aDocketInfo.push(tmpOTN.map(function(value,index) { return value['text'];}));                           
-    aDocketInfo.push(tmpDOB.map(function(value,index) { return value['text'];}));                           
+    aDocketInfo[0] = aDocketInfo[0].concat(tmpDocketNumbers.map(function(value,index) { return value['text'];}));      
+    aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));                        
+    aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));                           
+    aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));                           
 
     // for testing purposes, dump the docket info to the command line
-    require('utils').dump(aDocketInfo);                                             
+    // require('utils').dump(aDocketInfo);                                             
     
     // TODO - what should I do with aDocketInfo?  It would be nice to have one object that has all of 
     // our aDocketInfo on it, but that may not be possible.  I don't know that I can use the same
@@ -167,5 +167,6 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
 
 casper.run(function() {
 //    require('utils').dump(casper.test.getFailures());
+    require('utils').dump(aDocketInfo);                                             
     this.exit();
 });
