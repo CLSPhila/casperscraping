@@ -26,6 +26,41 @@ function writeHTMLToFile(file, data)
     fs.write(file, data, 'w');
 }
 
+function getCaseInformation()
+{
+    // find all of the docketnumbers, statuses, OTNs and DOBs; id$= is a wildcard search that finds any id ending with docketNumberLable
+    var tmpDocketNumbers =casper.getElementsInfo("span[id$='docketNumberLabel']");                          
+    var tmpStatus = casper.getElementsInfo("span[id$='caseStatusNameLabel']");                              
+    var tmpOTN = casper.getElementsInfo("span[id$='otnLabel']");                                            
+    var tmpDOB = casper.getElementsInfo("span[id$='primaryParticipantDobLabel']");                          
+    var aDocketInfo = new Array(tmpDocketNumbers.map(function(value,index) { return value['text'];}));      
+    aDocketInfo.push(tmpStatus.map(function(value,index) { return value['text'];}));                        
+    aDocketInfo.push(tmpOTN.map(function(value,index) { return value['text'];}));                           
+    aDocketInfo.push(tmpDOB.map(function(value,index) { return value['text'];}));                           
+
+    // for testing purposes, dump the docket info to the command line
+    require('utils').dump(aDocketInfo);                                             
+    
+    // TODO - what should I do with aDocketInfo?  It would be nice to have one object that has all of 
+    // our aDocketInfo on it, but that may not be possible.  I don't know that I can use the same
+    // aDocketInfo in every call here (could there be a global aDocketInfo?).  Perhaps just write to a file
+    // each time?  We are going to have to dump to a file at some point anyway.  
+    
+//    writeHTMLToFile("page3.html", this.getPageContent());
+    if (this.exists("a[href*='casePager$ctl07']"))
+    {
+        console.log("im recursing!");
+        // call the next page button
+        casper.evaluate(function() { 
+            setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
+         });
+        casper.wait(3000);
+        casper.then(getCaseInformation);
+    }
+    else
+        console.log("no more recursing");
+}
+
 /*
 var casper = require("casper").create({
 	verbose:true,
@@ -87,11 +122,11 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
 casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel']",
     function getDocketNumbers()  {
         console.log("Found selector.")
-        writeHTMLToFile("page3.html", this.getPageContent());
         
-        // find all of the docketnumbers; id$= is a wildcard search that finds any id ending with docketNumberLable
-        var docketNumbers = casper.getElementsAttribute("span[id$='docketNumberLabel']", "innerHTML");
-        require('utils').dump(docketNumbers);
+        var aDocketInfo = new Array();
+        casper.then(getCaseInformation);
+
+/*
         this.capture("02.png");
         // scrape docket numbers from each page
         //TODO: consider doing this loop outside of the .waitforselector callback. 
@@ -122,6 +157,7 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
         console.log(spans.join(", "))
         this.test.assert(spans.length===nameInfo.numRecords, "spans is length " + spans.length + 
                             " but is should be " + nameInfo.numRecords);
+                            */
     }, //end of waitForSelector then function)
     function() {
         this.capture("02.png");
@@ -133,8 +169,3 @@ casper.run(function() {
 //    require('utils').dump(casper.test.getFailures());
     this.exit();
 });
-
-
-
-
-
