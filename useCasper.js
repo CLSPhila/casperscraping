@@ -72,6 +72,43 @@ var casper = require("casper").create({
 casper.options.verbose = true;
 casper.options.logLeval = "debug";
 
+// check for and collect commandline options
+if (casper.cli.has("helpMe"))
+{
+    casper.echo("This script navigates the AOPC website automatically.");
+    casper.echo("It requires that you provide a first and last name and, optionally, a DOB.");
+    casper.echo("  --first=FIRSTNAME");
+    casper.echo("  --last=LASTNAME");
+    casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros");
+    casper.echo("  --test  If you want to run in test mode, just include this flag");
+    casper.echo("  --helpMe  Prints this message");
+    casper.exit();
+}   
+
+// check for CLI; skip ahead if this is a test
+if (!casper.cli.has("test") && !casper.cli.get("test"))
+{
+    if (!casper.cli.has("first") && (casper.cli.get("first") !== true))
+    {
+        casper.echo("You neglected to include a first name");
+        casper.exit();
+    }
+
+    if (!casper.cli.has("last") && (casper.cli.get("last") !== true))                                               
+    {                                                                                                               
+        casper.echo("You neglected to include a last name");                                                       
+        casper.exit();                                                                                              
+    }                     
+
+    // if we got here, then all of the CLIs are where they should be; set the user settings
+    // TODO: input validation on the DOB
+    nameInfo.lastName = casper.cli.get("last");
+    nameInfo.firstName = casper.cli.get("first");
+    nameInfo.DOB = casper.cli.get("DOB");
+
+} // end if casper.cli.has("test")
+
+
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
     // writeHTMLToFile("page1.html", this.getPageContent());
     this.test.assertExists("select[name='"+searchTypeListControl+"']", "Search type selector exists");
