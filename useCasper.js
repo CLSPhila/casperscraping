@@ -20,6 +20,12 @@ var aDocketInfo = [new Array(), new Array(), new Array(), new Array()]
 //TODO: Global namespace pollution, a smidge. Once we know all the selectors we need,
 //      then mayhap it'd be useful to put all this into some kind of nested literal bject. 
 
+//create casper instance
+var casper = require('casper').create()
+casper.options.verbose = true;
+casper.options.logLeval = "debug";
+
+
 function writeHTMLToFile(file, data)
 {
     var fs = require('fs');
@@ -46,7 +52,6 @@ function getCaseInformation()
     // aDocketInfo in every call here (could there be a global aDocketInfo?).  Perhaps just write to a file
     // each time?  We are going to have to dump to a file at some point anyway.  
     
-//    writeHTMLToFile("page3.html", this.getPageContent());
     if (this.exists("a[href*='casePager$ctl07']"))
     {
         console.log("im recursing!");
@@ -61,16 +66,6 @@ function getCaseInformation()
         console.log("no more recursing");
 }
 
-/*
-var casper = require("casper").create({
-	verbose:true,
-	logLevel:"debug"
-});
-*/
-
-//casper.options.waitTimeout = 20000; 
-casper.options.verbose = true;
-casper.options.logLeval = "debug";
 
 // check for and collect commandline options
 if (casper.cli.has("helpMe"))
@@ -110,9 +105,13 @@ if (!casper.cli.has("test") && !casper.cli.get("test"))
 
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
-    // writeHTMLToFile("page1.html", this.getPageContent());
-    this.test.assertExists("select[name='"+searchTypeListControl+"']", "Search type selector exists");
-    
+    //this.test.assertExists("select[name='"+searchTypeListControl+"']", "Search type selector exists");
+    //instead of test.assert
+    if (this.exists("select[name='"+searchTypeListControl+"']")) {
+        console.log("Successfully found the Search Type List Control")
+    } else {
+        throw new Error( "Cannot find Search Type List Control.");
+    }
     //so I need to change the "selected" attribute of the options list and then evaluate the __doPostBack method of the options list.
     // I also have to pass in the variable b/c in evaluate, the variable scope doesn't include anything from this casper script
     this.evaluate(function changeToParticipant(fieldName) {
@@ -127,8 +126,13 @@ casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
 
 // Now insert the first and late name
 casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
-    this.test.assertExists("[name='"+nameControls.lastName+"']")
-    
+    //this.test.assertExists("[name='"+nameControls.lastName+"']")
+    if (this.exists("[name='"+nameControls.lastName+"']")) {
+        console.log("Participant name selected ... entering name information ... ");
+    } else {
+        throw new Error("Cannot find Participant Name form");
+    }
+
     this.evaluate(function searchByNameDOB(aFirstName, aLastName, aDOB, aFirstNameField, aLastNameField, aDOBField, aStartField, aEndField, aButtonField){
         // put in the last name
         var lastNameSelector = "input[name='"+aLastNameField+"']"
@@ -158,47 +162,14 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
 
 casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel']",
     function getDocketNumbers()  {
-        console.log("Found selector.")
+        console.log("Dockets have been found ... now scraping dockets ....")
         
         var aDocketInfo = new Array();
         casper.then(getCaseInformation);
 
-/*
-        this.capture("02.png");
-        // scrape docket numbers from each page
-        //TODO: consider doing this loop outside of the .waitforselector callback. 
-        //      It could, instead, be a loop of casper.then(callback) functions.
-        var spans = this.evaluate(function() {
-            var spanCollector = []
-            //for preventing infinite loops
-            var numPages = 1
-            var maxPages = 5
-            do {
-                var tempSpans = jQuery("[id*='docketNumberLabel']").map(function(index, span) {return jQuery(span).text()})
-                //tempSpans is a "pseudoarray", so doesn't have nice array methods like "join", so use $.makeArray
-                spanCollector = spanCollector.concat(jQuery.makeArray(tempSpans))
-                
-                //if there's another page, go to it.
-                // The next link will have an href value if its active, and a attribute "disabled" that equals "disabled" if
-                // there is no next page. 
-                var hasMorePages = false;
-                if (jQuery("a[href*='casePager$ctl07']").length > 0) {
-                    hasMorePages = true;
-                    numPages += 1
-                    setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
-                }
-            } while (hasMorePages && numPages <= maxPages) //end do while
-            return spanCollector
-        })//end of .evaluate
-        console.log("Spans?");
-        console.log(spans.join(", "))
-        this.test.assert(spans.length===nameInfo.numRecords, "spans is length " + spans.length + 
-                            " but is should be " + nameInfo.numRecords);
-                            */
     }, //end of waitForSelector then function)
     function() {
-        this.capture("02.png");
-        console.log("tired of waiting.");
+        console.log("No dockets were found.  Either there are none to find or something is broken.");
     }, //end of waitForSelector onTimout function
     20000);
 
