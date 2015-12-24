@@ -171,7 +171,7 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     function() {
         console.log("No dockets were found.  Either there are none to find or something is broken.");
     }, //end of waitForSelector onTimout function
-    20000);
+    1000);  // Mike says: I'm not convinced we need this timeout anymore.
 
 casper.run(function() {
 //    require('utils').dump(casper.test.getFailures());
