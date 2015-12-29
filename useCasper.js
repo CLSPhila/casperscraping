@@ -74,7 +74,7 @@ if (casper.cli.has("helpMe"))
     casper.echo("It requires that you provide a first and last name and, optionally, a DOB.");
     casper.echo("  --first=FIRSTNAME");
     casper.echo("  --last=LASTNAME");
-    casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros");
+    casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros.  If a DOB is missing, the script will return only the first page of results (this is to give the user some dobs to search on)");
     casper.echo("  --test  If you want to run in test mode, just include this flag");
     casper.echo("  --helpMe  Prints this message");
     casper.exit();
