@@ -26,7 +26,8 @@ var aDocketInfo = [new Array(), new Array(), new Array(), new Array()]
 
 var statusCodes = {
     success: 0,
-    failure: 1
+    noDocketsFound: 1,
+    failure: 2
 }
 
 var scrapeResults = {
@@ -85,8 +86,8 @@ function getCaseInformation()
 }
 
 function printResults(dataArray) {
-    console.log("Results!");
-    utils.dump(objectifyDockets(dataArray[0],dataArray[1],dataArray[2],dataArray[3])  )
+    console.log("Results");
+    utils.dump(dataArray)
 }
 
 // check for and collect commandline options
@@ -195,7 +196,13 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     10000);  
 
 casper.run(function() {
-    printResults(aDocketInfo);                                             
+    scrapeResults.dockets = objectifyDockets(aDocketInfo[0],aDocketInfo[1],aDocketInfo[2],aDocketInfo[3])
+    if (scrapeResults.dockets.length===0) {
+        scrapeResults.statusCode = statusCodes.noDocketsFound
+    } else {
+        scrapeResults.statusCode = statusCodes.success;
+    }
+    printResults(scrapeResults);                                             
     this.exit();
 });
 
