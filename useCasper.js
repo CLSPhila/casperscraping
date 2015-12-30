@@ -5,7 +5,7 @@ casper.options.logLeval = "debug";
 
 
 // test data
-var nameInfo = {lastName: "Smith", 
+var nameInfo = {lastName: "Smith",
                 firstName: "John",
                 DOB: "08/29/1985",
                 numRecords: 23};
@@ -36,7 +36,7 @@ var scrapeResults = {
 }//end of scrapeResults
 
 function DocketInfo (num, stat, OTN, DOB) {
-    //prototype for docket information 
+    //prototype for docket information
     this.num = num;
     this.stat = stat;
     this.OTN = OTN;
@@ -62,20 +62,20 @@ function objectifyDockets(nums, statuses, OTNs, DOBs) {
 function getCaseInformation()
 {
     // find all of the docketnumbers, statuses, OTNs and DOBs; id$= is a wildcard search that finds any id ending with docketNumberLable
-    var tmpDocketNumbers =casper.getElementsInfo("span[id$='docketNumberLabel']");                          
-    var tmpStatus = casper.getElementsInfo("span[id$='caseStatusNameLabel']");                              
-    var tmpOTN = casper.getElementsInfo("span[id$='otnLabel']");                                            
-    var tmpDOB = casper.getElementsInfo("span[id$='primaryParticipantDobLabel']");                          
-    aDocketInfo[0] = aDocketInfo[0].concat(tmpDocketNumbers.map(function(value,index) { return value['text'];}));      
-    aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));                        
-    aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));                           
-    aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));                           
+    var tmpDocketNumbers =casper.getElementsInfo("span[id$='docketNumberLabel']");
+    var tmpStatus = casper.getElementsInfo("span[id$='caseStatusNameLabel']");
+    var tmpOTN = casper.getElementsInfo("span[id$='otnLabel']");
+    var tmpDOB = casper.getElementsInfo("span[id$='primaryParticipantDobLabel']");
+    aDocketInfo[0] = aDocketInfo[0].concat(tmpDocketNumbers.map(function(value,index) { return value['text'];}));
+    aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));
+    aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));
+    aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));
 
     if (this.exists("a[href*='casePager$ctl07']"))
     {
         console.log("im recursing!");
         // call the next page button
-        casper.evaluate(function() { 
+        casper.evaluate(function() {
             setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
          });
         casper.wait(3000);
@@ -101,7 +101,7 @@ if (casper.cli.has("helpMe"))
     casper.echo("  --test  If you want to run in test mode, just include this flag");
     casper.echo("  --helpMe  Prints this message");
     casper.exit();
-}   
+}
 
 // check for CLI; skip ahead if this is a test
 if (!casper.cli.has("test") && !casper.cli.get("test"))
@@ -112,11 +112,11 @@ if (!casper.cli.has("test") && !casper.cli.get("test"))
         casper.exit();
     }
 
-    if (!casper.cli.has("last") && (casper.cli.get("last") !== true))                                               
-    {                                                                                                               
-        casper.echo("You neglected to include a last name");                                                       
-        casper.exit();                                                                                              
-    }                     
+    if (!casper.cli.has("last") && (casper.cli.get("last") !== true))
+    {
+        casper.echo("You neglected to include a last name");
+        casper.exit();
+    }
 
     // if we got here, then all of the CLIs are where they should be; set the user settings
     // TODO: input validation on the DOB
@@ -129,7 +129,10 @@ casper.echo("Search parameters:");
 casper.echo(utils.dump(nameInfo));
 casper.echo("-----------------");
 
-
+casper.on('parse.error', function() {
+    this.echo("found an error. exiting.");
+    this.exit();
+})
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
     if (this.exists("select[name='"+searchTypeListControl+"']")) {
@@ -148,11 +151,14 @@ casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
 
 
 // Now insert the first and late name
+
 casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
-    if (this.exists("[name='"+nameControls.lastName+"']")) {
+    if (this.exists("[FAKEname='"+nameControls.lastName+"']")) {
         console.log("Participant name selected ... entering name information ... ");
     } else {
-        throw new Error("Cannot find Participant Name form");
+        this.emit("parse.error");
+        return
+        //throw new Error("Cannot find Participant Name form");
     }
 
     this.evaluate(function searchByNameDOB(aFirstName, aLastName, aDOB, aFirstNameField, aLastNameField, aDOBField, aStartField, aEndField, aButtonField){
@@ -163,7 +169,7 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
         // put in the first name
         var firstNameSelector = "input[name='"+aFirstNameField+"']";
         jQuery(firstNameSelector).val(aFirstName);
-        
+
         // put in the DOB
         var DOBSelector = "input[name='"+aDOBField+"']";
         jQuery(DOBSelector).val(aDOB);
@@ -182,10 +188,12 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
     }, nameInfo.firstName, nameInfo.lastName, nameInfo.DOB, nameControls.firstName, nameControls.lastName, nameControls.DOB, nameControls.startDate, nameControls.endDate, buttonField);
 });
 
+
+
 casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel']",
     function getDocketNumbers()  {
         console.log("Dockets have been found ... now scraping dockets ....")
-        
+
         var aDocketInfo = new Array();
         casper.then(getCaseInformation);
 
@@ -193,8 +201,7 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     function() {
         console.log("No dockets were found.  Either there are none to find or something is broken.");
     }, //end of waitForSelector onTimout function
-    10000);  
-
+    10000);
 casper.run(function() {
     scrapeResults.dockets = objectifyDockets(aDocketInfo[0],aDocketInfo[1],aDocketInfo[2],aDocketInfo[3])
     if (scrapeResults.dockets.length===0) {
@@ -202,8 +209,7 @@ casper.run(function() {
     } else {
         scrapeResults.statusCode = statusCodes.success;
     }
-    printResults(scrapeResults);                                             
+    printResults(scrapeResults);
     this.exit();
 });
-
 
