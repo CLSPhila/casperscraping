@@ -1,3 +1,9 @@
+var utils = require('utils');
+var casper = require('casper').create()
+casper.options.verbose = true;
+casper.options.logLeval = "debug";
+
+
 // test data
 var nameInfo = {lastName: "Smith", 
                 firstName: "John",
@@ -10,27 +16,47 @@ var nameControls = {lastName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDy
                     DOB: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$dateOfBirthControl$DateTextBox",
                     startDate: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$dateFiledControl$beginDateChildControl$DateTextBox",
                     endDate: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$dateFiledControl$endDateChildControl$DateTextBox"};
-
 var buttonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchCommandControl";
-
 var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 var participantSelect = "Aopc.Cp.Views.DocketSheets.IParticipantSearchView, CPCMSApplication, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
 var docketNumberLabelId = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_caseList_ctl00_ctl00_docketNumberLabel"
+
+
 var aDocketInfo = [new Array(), new Array(), new Array(), new Array()]
-//TODO: Global namespace pollution, a smidge. Once we know all the selectors we need,
-//      then mayhap it'd be useful to put all this into some kind of nested literal bject. 
 
-//create casper instance
-var casper = require('casper').create()
-casper.options.verbose = true;
-casper.options.logLeval = "debug";
-
-
-function writeHTMLToFile(file, data)
-{
-    var fs = require('fs');
-    fs.write(file, data, 'w');
+var statusCodes = {
+    success: 0,
+    failure: 1
 }
+
+var scrapeResults = {
+    statusCode: statusCodes.failure,
+    dockets: []
+}//end of scrapeResults
+
+function DocketInfo (num, stat, OTN, DOB) {
+    //prototype for docket information 
+    this.num = num;
+    this.stat = stat;
+    this.OTN = OTN;
+    this.DOB = DOB;
+}//end of docketInfo
+
+function objectifyDockets(nums, statuses, OTNs, DOBs) {
+    //Input: Four arrays--docket numbers, statuses, OTNS, and dates of birth
+    //Output: an array of docket objects.
+    //TODO: Should I declare the docket object prototype inside this function? JS is confusing.
+    var docketArray = []
+    if ( (nums.length != statuses.length) || (nums.length != OTNs.length) || (nums.length != DOBs.length) ) {
+        throw new Error("docket arrays not the same length. That's weird.");
+    }
+    for (var i=0; i<nums.length; i++) {
+        docketArray.push(new DocketInfo(nums[i],statuses[i],OTNs[i],DOBs[i])  )
+    }
+    return docketArray
+
+
+}//end of objectify Dockets
 
 function getCaseInformation()
 {
@@ -44,14 +70,6 @@ function getCaseInformation()
     aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));                           
     aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));                           
 
-    // for testing purposes, dump the docket info to the command line
-    // require('utils').dump(aDocketInfo);                                             
-    
-    // TODO - what should I do with aDocketInfo?  It would be nice to have one object that has all of 
-    // our aDocketInfo on it, but that may not be possible.  I don't know that I can use the same
-    // aDocketInfo in every call here (could there be a global aDocketInfo?).  Perhaps just write to a file
-    // each time?  We are going to have to dump to a file at some point anyway.  
-    
     if (this.exists("a[href*='casePager$ctl07']"))
     {
         console.log("im recursing!");
@@ -66,6 +84,10 @@ function getCaseInformation()
         console.log("no more recursing");
 }
 
+function printResults(dataArray) {
+    console.log("Results!");
+    utils.dump(objectifyDockets(dataArray[0],dataArray[1],dataArray[2],dataArray[3])  )
+}
 
 // check for and collect commandline options
 if (casper.cli.has("helpMe"))
@@ -100,20 +122,20 @@ if (!casper.cli.has("test") && !casper.cli.get("test"))
     nameInfo.lastName = casper.cli.get("last");
     nameInfo.firstName = casper.cli.get("first");
     nameInfo.DOB = casper.cli.get("DOB");
-
 } // end if casper.cli.has("test")
+
+casper.echo("Search parameters:");
+casper.echo(utils.dump(nameInfo));
+casper.echo("-----------------");
+
 
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
-    //this.test.assertExists("select[name='"+searchTypeListControl+"']", "Search type selector exists");
-    //instead of test.assert
     if (this.exists("select[name='"+searchTypeListControl+"']")) {
         console.log("Successfully found the Search Type List Control")
     } else {
         throw new Error( "Cannot find Search Type List Control.");
     }
-    //so I need to change the "selected" attribute of the options list and then evaluate the __doPostBack method of the options list.
-    // I also have to pass in the variable b/c in evaluate, the variable scope doesn't include anything from this casper script
     this.evaluate(function changeToParticipant(fieldName) {
         var element = jQuery("[name='"+fieldName+"']");
         var selectedElement = jQuery("option:selected", element).removeAttr("selected");
@@ -126,7 +148,6 @@ casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
 
 // Now insert the first and late name
 casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
-    //this.test.assertExists("[name='"+nameControls.lastName+"']")
     if (this.exists("[name='"+nameControls.lastName+"']")) {
         console.log("Participant name selected ... entering name information ... ");
     } else {
@@ -171,10 +192,11 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     function() {
         console.log("No dockets were found.  Either there are none to find or something is broken.");
     }, //end of waitForSelector onTimout function
-    1000);  // Mike says: I'm not convinced we need this timeout anymore.
+    10000);  
 
 casper.run(function() {
-//    require('utils').dump(casper.test.getFailures());
-    require('utils').dump(aDocketInfo);                                             
+    printResults(aDocketInfo);                                             
     this.exit();
 });
+
+
