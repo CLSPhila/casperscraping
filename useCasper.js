@@ -30,10 +30,16 @@ var statusCodes = {
     failure: 2
 }
 
+var resultFormats = {
+    json: 0,
+    pipes: 1,
+    yaml: 2
+}
+
 var scrapeResults = {
     statusCode: statusCodes.failure,
     dockets: []
-}//end of scrapeResults
+}
 
 function DocketInfo (num, stat, OTN, DOB) {
     //prototype for docket information
@@ -41,7 +47,7 @@ function DocketInfo (num, stat, OTN, DOB) {
     this.stat = stat;
     this.OTN = OTN;
     this.DOB = DOB;
-}//end of docketInfo
+}//end of DocketInfo()
 
 function objectifyDockets(nums, statuses, OTNs, DOBs) {
     //Input: Four arrays--docket numbers, statuses, OTNS, and dates of birth
@@ -85,10 +91,40 @@ function getCaseInformation()
         console.log("no more recursing");
 }
 
-function printResults(dataArray) {
-    console.log("Results");
-    utils.dump(dataArray)
+function printPipes(data) {
+    //given the scrapeResults object described above, 
+    //print to the console the results in a pipe delimited format
+    //N.B. In this format, the scraped docket information is printed as a markdown table.
+    casper.echo("Status: " + data.statusCode);
+    casper.echo(" Docket Number | Status | OTN | DOB ");
+    casper.echo("---|---|---|---"); 
+    data.dockets.forEach(function(result, index, allResults) {
+        casper.echo("result: ")
+        utils.dump(result)
+        casper.echo("index:")
+        utils.dump(index)
+        casper.echo("allResults");
+        utils.dump(allResults);
+        casper.echo(result.num + " | " + result.stat + " | " + result.OTN + " | " + result.DOB);
+    });
 }
+
+function printResults(dataArray, format) {
+    casper.echo("Printing Results");
+    switch(format) {
+        case resultFormats.json:
+            casper.echo("printing results in json");
+            utils.dump(dataArray)
+            break;
+        case resultFormats.pipes:
+            casper.echo("printing results in pipes");
+            printPipes(dataArray);
+            break;
+        case resultFormats.yaml:
+            casper.echo("printing results in yaml");
+            break;
+    }
+}//end of printResults()
 
 // check for and collect commandline options
 if (casper.cli.has("helpMe"))
@@ -129,16 +165,19 @@ casper.echo("Search parameters:");
 casper.echo(utils.dump(nameInfo));
 casper.echo("-----------------");
 
-casper.on('parse.error', function() {
-    this.echo("found an error. exiting.");
+casper.on('aopcSite.error', function() {
+    scrapeResults.statusCode = statusCodes.failure
+    printResults(scrapeResults, resultFormat.pipes);
     this.exit();
 })
 
 casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
     if (this.exists("select[name='"+searchTypeListControl+"']")) {
-        console.log("Successfully found the Search Type List Control")
+        this.log("Successfully found the Search Type List Control", "info")
     } else {
-        throw new Error( "Cannot find Search Type List Control.");
+        this.log("Cannot find Search List Control.", "error");
+        this.emit("aopcSite.error");
+        return
     }
     this.evaluate(function changeToParticipant(fieldName) {
         var element = jQuery("[name='"+fieldName+"']");
@@ -153,10 +192,11 @@ casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
 // Now insert the first and late name
 
 casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
-    if (this.exists("[FAKEname='"+nameControls.lastName+"']")) {
-        console.log("Participant name selected ... entering name information ... ");
+    if (this.exists("[name='"+nameControls.lastName+"']")) {
+        this.log("Participant name selected ... entering name information ... ", "info");
     } else {
-        this.emit("parse.error");
+        this.log("Cannot find entry boxes for participant name information","error");
+        this.emit("aopcSite.error");
         return
         //throw new Error("Cannot find Participant Name form");
     }
@@ -186,7 +226,7 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
         var button = jQuery("input[name='"+aButtonField+"']");
         button.click()
     }, nameInfo.firstName, nameInfo.lastName, nameInfo.DOB, nameControls.firstName, nameControls.lastName, nameControls.DOB, nameControls.startDate, nameControls.endDate, buttonField);
-});
+});//end of casper.waitForSelector
 
 
 
@@ -202,6 +242,10 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
         console.log("No dockets were found.  Either there are none to find or something is broken.");
     }, //end of waitForSelector onTimout function
     10000);
+
+
+
+
 casper.run(function() {
     scrapeResults.dockets = objectifyDockets(aDocketInfo[0],aDocketInfo[1],aDocketInfo[2],aDocketInfo[3])
     if (scrapeResults.dockets.length===0) {
@@ -209,7 +253,7 @@ casper.run(function() {
     } else {
         scrapeResults.statusCode = statusCodes.success;
     }
-    printResults(scrapeResults);
+    printResults(scrapeResults, resultFormats.pipes);
     this.exit();
 });
 
