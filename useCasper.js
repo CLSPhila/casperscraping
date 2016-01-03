@@ -33,7 +33,6 @@ var statusCodes = {
 var resultFormats = {
     json: 0,
     pipes: 1,
-    yaml: 2
 }
 
 var scrapeResults = {
@@ -99,18 +98,14 @@ function printPipes(data) {
     casper.echo(" Docket Number | Status | OTN | DOB ");
     casper.echo("---|---|---|---"); 
     data.dockets.forEach(function(result, index, allResults) {
-        casper.echo("result: ")
-        utils.dump(result)
-        casper.echo("index:")
-        utils.dump(index)
-        casper.echo("allResults");
-        utils.dump(allResults);
         casper.echo(result.num + " | " + result.stat + " | " + result.OTN + " | " + result.DOB);
     });
 }
 
 function printResults(dataArray, format) {
+    var borderString = "===================";
     casper.echo("Printing Results");
+    casper.echo(borderString);
     switch(format) {
         case resultFormats.json:
             casper.echo("printing results in json");
@@ -121,9 +116,10 @@ function printResults(dataArray, format) {
             printPipes(dataArray);
             break;
         case resultFormats.yaml:
-            casper.echo("printing results in yaml");
+            casper.echo("printing results in yaml -- UNIMPLEMENTED");
             break;
     }
+    casper.echo(borderString);
 }//end of printResults()
 
 // check for and collect commandline options
@@ -136,6 +132,8 @@ if (casper.cli.has("helpMe"))
     casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros.  If a DOB is missing, the script will return only the first page of results (this is to give the user some dobs to search on)");
     casper.echo("  --test  If you want to run in test mode, just include this flag");
     casper.echo("  --helpMe  Prints this message");
+    casper.echo("The exit status codes are:")
+    utils.dump(statusCodes);
     casper.exit();
 }
 
@@ -166,7 +164,9 @@ casper.echo(utils.dump(nameInfo));
 casper.echo("-----------------");
 
 casper.on('aopcSite.error', function() {
-    scrapeResults.statusCode = statusCodes.failure
+    if (!scrapeResults.hasOwnProperty('statusCode')) {
+        scrapeResults.statusCode = statusCodes.failure
+    }
     printResults(scrapeResults, resultFormat.pipes);
     this.exit();
 })
@@ -226,6 +226,11 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
         var button = jQuery("input[name='"+aButtonField+"']");
         button.click()
     }, nameInfo.firstName, nameInfo.lastName, nameInfo.DOB, nameControls.firstName, nameControls.lastName, nameControls.DOB, nameControls.startDate, nameControls.endDate, buttonField);
+}, function() {
+    //onTimeOut function
+    this.log("Waiting for name form to appear has timed out.");
+    scrapeResults.statusCode = statusCodes.failure
+    this.emit('aopcSite.error');
 });//end of casper.waitForSelector
 
 
@@ -240,6 +245,8 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
     }, //end of waitForSelector then function)
     function() {
         console.log("No dockets were found.  Either there are none to find or something is broken.");
+        scrapeResults.statusCode = statusCodes.noDocketsFound
+        this.emit('aopcSite.error');
     }, //end of waitForSelector onTimout function
     10000);
 
