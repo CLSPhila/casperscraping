@@ -76,9 +76,8 @@ function getCaseInformation()
     aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));
     aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));
 
-    if (this.exists("a[href*='casePager$ctl07']"))
+    if (this.exists("a[href*='casePager$ctl07']") && !casper.cli.has("limit"))
     {
-        console.log("im recursing!");
         // call the next page button
         casper.evaluate(function() {
             setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
@@ -86,8 +85,6 @@ function getCaseInformation()
         casper.wait(3000);
         casper.then(getCaseInformation);
     }
-    else
-        console.log("no more recursing");
 }
 
 function printPipes(data) {
@@ -95,8 +92,8 @@ function printPipes(data) {
     //print to the console the results in a pipe delimited format
     //N.B. In this format, the scraped docket information is printed as a markdown table.
     casper.echo("Status: " + data.statusCode);
-    casper.echo(" Docket Number | Status | OTN | DOB ");
-    casper.echo("---|---|---|---"); 
+    if (casper.cli.has("chatty")) casper.echo(" Docket Number | Status | OTN | DOB ");
+    if (casper.cli.has("chatty")) casper.echo("---|---|---|---"); 
     data.dockets.forEach(function(result, index, allResults) {
         casper.echo(result.num + " | " + result.stat + " | " + result.OTN + " | " + result.DOB);
     });
@@ -104,22 +101,22 @@ function printPipes(data) {
 
 function printResults(dataArray, format) {
     var borderString = "===================";
-    casper.echo("Printing Results");
-    casper.echo(borderString);
+    if (casper.cli.has("chatty")) casper.echo("Printing Results");
+    if (casper.cli.has("chatty")) casper.echo(borderString);
     switch(format) {
         case resultFormats.json:
-            casper.echo("printing results in json");
+            if (casper.cli.has("chatty")) casper.echo("printing results in json");
             utils.dump(dataArray)
             break;
         case resultFormats.pipes:
-            casper.echo("printing results in pipes");
+            if (casper.cli.has("chatty")) casper.echo("printing results in pipes");
             printPipes(dataArray);
             break;
         case resultFormats.yaml:
-            casper.echo("printing results in yaml -- UNIMPLEMENTED");
+            if (casper.cli.has("chatty")) casper.echo("printing results in yaml -- UNIMPLEMENTED");
             break;
     }
-    casper.echo(borderString);
+    if (casper.cli.has("chatty")) casper.echo(borderString);
 }//end of printResults()
 
 // check for and collect commandline options
@@ -130,6 +127,8 @@ if (casper.cli.has("helpMe"))
     casper.echo("  --first=FIRSTNAME");
     casper.echo("  --last=LASTNAME");
     casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros.  If a DOB is missing, the script will return only the first page of results (this is to give the user some dobs to search on)");
+    casper.echo("  --chatty Prints with lots of verbosity");
+    casper.echo("  --limit Limits the output to only one page of results");
     casper.echo("  --test  If you want to run in test mode, just include this flag");
     casper.echo("  --helpMe  Prints this message");
     casper.echo("The exit status codes are:")
@@ -159,9 +158,12 @@ if (!casper.cli.has("test") && !casper.cli.get("test"))
     nameInfo.DOB = casper.cli.get("DOB");
 } // end if casper.cli.has("test")
 
-casper.echo("Search parameters:");
-casper.echo(utils.dump(nameInfo));
-casper.echo("-----------------");
+if (casper.cli.has("chatty"))
+{
+    casper.echo("Search parameters:");
+    casper.echo(utils.dump(nameInfo));
+    casper.echo("-----------------");
+}
 
 casper.on('aopcSite.error', function() {
     if (!scrapeResults.hasOwnProperty('statusCode')) {
@@ -237,7 +239,7 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
 
 casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel']",
     function getDocketNumbers()  {
-        console.log("Dockets have been found ... now scraping dockets ....")
+        if (casper.cli.has("chatty")) console.log("Dockets have been found ... now scraping dockets ....")
 
         var aDocketInfo = new Array();
         casper.then(getCaseInformation);
