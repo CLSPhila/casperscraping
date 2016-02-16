@@ -1,14 +1,21 @@
+// TODO
+// first, this is untested.  
+// second, there is a problem in MDJ once you search--there is no span around the DOB or the docket number
+// so I have to find a different way to find those fields.  Why is this so much diffeernt than CP search?
+
+
 var utils = require('utils');
 var casper = require('casper').create()
 casper.options.verbose = true;
 casper.options.logLeval = "debug";
 
 
-// test data
+// test data, overwritten if there is input to the script
 var nameInfo = {lastName: "Smith",
                 firstName: "John",
                 DOB: "08/29/1985",
                 numRecords: 23};
+var mdj = false;
 
 // field names
 var nameControls = {lastName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$lastNameControl",
@@ -20,6 +27,19 @@ var buttonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent
 var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 var participantSelect = "Aopc.Cp.Views.DocketSheets.IParticipantSearchView, CPCMSApplication, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
 var docketNumberLabelId = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_caseList_ctl00_ctl00_docketNumberLabel"
+docketWebsite = "https://ujsportal.pacourts.us/DocketSheets/CP.aspx#";
+
+
+var mdjNameControls = {lastName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphSearchControls$udsParticipantName$txtLastName", 
+                       firstName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphSearchControls$udsParticipantName$txtFirstName",
+                       DOB: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphSearchControls$udsParticipantName$dpDOB$DateTextBox",
+                       startDate: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphSearchControls$udsParticipantName$DateFiledDateRangePicker$beginDateChildControl$DateTextBox",
+                       endDate: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphSearchControls$udsParticipantName$DateFiledDateRangePicker$endDateChildControl$DateTextBox"
+};
+var mdjButtonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$btnSearch";
+var mdjSearchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$ddlSearchType";
+var mdjParticipantSelect = "ParticipantName";
+var mdjDocketWebsite = "https://ujsportal.pacourts.us/DocketSheets/MDJ.aspx";
 
 
 var aDocketInfo = [new Array(), new Array(), new Array(), new Array()]
@@ -127,6 +147,7 @@ if (casper.cli.has("helpMe"))
     casper.echo("  --first=FIRSTNAME");
     casper.echo("  --last=LASTNAME");
     casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros.  If a DOB is missing, the script will return only the first page of results (this is to give the user some dobs to search on)");
+    casper.echo("  --mdj Searches the MDJ website instead of the CP website
     casper.echo("  --chatty Prints with lots of verbosity");
     casper.echo("  --limit Limits the output to only one page of results");
     casper.echo("  --test  If you want to run in test mode, just include this flag");
@@ -158,6 +179,16 @@ if (!casper.cli.has("test") && !casper.cli.get("test"))
     nameInfo.DOB = casper.cli.get("DOB");
 } // end if casper.cli.has("test")
 
+
+// if this is an mdj search, then change a bunch of the variables so taht we can do an MDJ search
+if (casper.cli.has("mdj"))
+{
+    mdj = true;
+    docketWebsite = mdjDocketWebsite;
+    searchTypeListControl = mdjSearchTypeListControl;
+    nameControls = mdjNameControls;
+    buttonField = mdjButtonField;
+}
 if (casper.cli.has("chatty"))
 {
     casper.echo("Search parameters:");
@@ -173,7 +204,8 @@ casper.on('aopcSite.error', function() {
     this.exit();
 })
 
-casper.start("https://ujsportal.pacourts.us/DocketSheets/CP.aspx#", function() {
+
+casper.start(docketWebsite, function() {
     if (this.exists("select[name='"+searchTypeListControl+"']")) {
         this.log("Successfully found the Search Type List Control", "info")
     } else {
@@ -219,7 +251,7 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
         // put in the start and end dates to search within
         var startDateSelector = "input[name='"+aStartField+"']";
         var endDateSelector = "input[name='"+aEndField+"']";
-        jQuery(startDateSelector).val("01/01/1900");
+        jQuery(startDateSelector).val("01/01/1950");
         var date = new Date();
         sDate = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
         jQuery(endDateSelector).val(sDate);
