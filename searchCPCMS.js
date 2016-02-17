@@ -84,6 +84,8 @@ function objectifyDockets(nums, statuses, OTNs, DOBs) {
 
 }//end of objectify Dockets
 
+
+// get the case information from all of the CP csaes
 function getCaseInformation()
 {
     // find all of the docketnumbers, statuses, OTNs and DOBs; id$= is a wildcard search that finds any id ending with docketNumberLable
@@ -107,8 +109,33 @@ function getCaseInformation()
     }
 }
 
+// get case information from all of the MDJ cases
+function getCaseInformationMDJ()
+{
+    casper.echo("In here");
+    // find all of the docketnumbers, statuses, OTNs and DOBs; id$= is a wildcard search that finds any id ending with docketNumberLable
+    //var tmpDocketNumbers =casper.getElementsInfo("span[id$='docketNumberLabel']");
+    //var tmpStatus = casper.getElementsInfo("span[id$='caseStatusNameLabel']");
+    //var tmpOTN = casper.getElementsInfo("span[id$='otnLabel']");
+    //var tmpDOB = casper.getElementsInfo("span[id$='primaryParticipantDobLabel']");
+    //aDocketInfo[0] = aDocketInfo[0].concat(tmpDocketNumbers.map(function(value,index) { return value['text'];}));
+    //aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));
+    //aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));
+    //aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));
+
+    //if (this.exists("a[href*='casePager$ctl07']") && !casper.cli.has("limit"))
+    //{
+    //    // call the next page button
+    //    casper.evaluate(function() {
+    //        setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
+    //     });
+    //    casper.wait(3000);
+    //    casper.then(getCaseInformation);
+//    }
+}
+
 function printPipes(data) {
-    //given the scrapeResults object described above, 
+//given the scrapeResults object described above, 
     //print to the console the results in a pipe delimited format
     //N.B. In this format, the scraped docket information is printed as a markdown table.
     casper.echo("Status: " + data.statusCode);
@@ -147,7 +174,7 @@ if (casper.cli.has("helpMe"))
     casper.echo("  --first=FIRSTNAME");
     casper.echo("  --last=LASTNAME");
     casper.echo("  --DOB=DOB Note that this should be in the form MM/DD/YYYY with leading zeros.  If a DOB is missing, the script will return only the first page of results (this is to give the user some dobs to search on)");
-    casper.echo("  --mdj Searches the MDJ website instead of the CP website
+    casper.echo("  --mdj Searches the MDJ website instead of the CP website");
     casper.echo("  --chatty Prints with lots of verbosity");
     casper.echo("  --limit Limits the output to only one page of results");
     casper.echo("  --test  If you want to run in test mode, just include this flag");
@@ -207,7 +234,7 @@ casper.on('aopcSite.error', function() {
 
 casper.start(docketWebsite, function() {
     if (this.exists("select[name='"+searchTypeListControl+"']")) {
-        this.log("Successfully found the Search Type List Control", "info")
+        this.log("Successfully found the Search Type List Control", "info");
     } else {
         this.log("Cannot find Search List Control.", "error");
         this.emit("aopcSite.error");
@@ -218,17 +245,20 @@ casper.start(docketWebsite, function() {
         var selectedElement = jQuery("option:selected", element).removeAttr("selected");
         var participantElement = jQuery("option:contains('Participant')",element);
         participantElement.attr("selected","selected");
+        __utils__.echo(participantElement);
+        __utils__.echo(element.serialize());
         setTimeout('__doPostBack(\''+fieldName+'\',\'\')',0);
     }, searchTypeListControl);//end of this.evaluate
  });//end of casper.start
 
 
 // Now insert the first and late name
-
-casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
+casper.waitForSelector("[name='"+nameControls.firstName+"']", function() {
     if (this.exists("[name='"+nameControls.lastName+"']")) {
-        this.log("Participant name selected ... entering name information ... ", "info");
+        casper.log("Participant name selected ... entering name information ... ", "info");
+        casper.echo("123");
     } else {
+        casper.echo("123912912929");
         this.log("Cannot find entry boxes for participant name information","error");
         this.emit("aopcSite.error");
         return
@@ -262,9 +292,10 @@ casper.waitForSelector("[name='"+nameControls.lastName+"']", function() {
     }, nameInfo.firstName, nameInfo.lastName, nameInfo.DOB, nameControls.firstName, nameControls.lastName, nameControls.DOB, nameControls.startDate, nameControls.endDate, buttonField);
 }, function() {
     //onTimeOut function
-    this.log("Waiting for name form to appear has timed out.");
-    scrapeResults.statusCode = statusCodes.failure
-    this.emit('aopcSite.error');
+//    this.log("Waiting for name form to appear has timed out.");
+//    scrapeResults.statusCode = statusCodes.failure
+//    this.emit('aopcSite.error');
+this.exit();
 });//end of casper.waitForSelector
 
 
@@ -274,7 +305,10 @@ casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphD
         if (casper.cli.has("chatty")) console.log("Dockets have been found ... now scraping dockets ....")
 
         var aDocketInfo = new Array();
-        casper.then(getCaseInformation);
+        if (mdj)
+            casper.ten(getCaseInformationMDJ);
+        else
+            casper.then(getCaseInformation);
 
     }, //end of waitForSelector then function)
     function() {
