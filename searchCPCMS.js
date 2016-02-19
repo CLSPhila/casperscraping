@@ -118,30 +118,34 @@ function getCaseInformation()
 // get case information from all of the MDJ cases
 function getCaseInformationMDJ()
 {
-    casper.echo("In here");
-    var aDocketInfo = casper.evaluate(function getDocketInfo(docketInfo) 
+    var dockets = casper.evaluate(function getDocketInfo()
     {
         var rows = __utils__.findAll("tr[class='gridViewRow']");
+        var aDockets = new Array();
         for (var i=0; i < rows.length; i++) 
         {
-            __utils__.echo(i);
-            docketInfo[0] = docketInfo[0].concat(rows[i].children[1].textContent);
-            docketInfo[1] = docketInfo[1].concat(rows[i].children[6].children[0].textContent);
-            docketInfo[2] = docketInfo[2].concat(rows[i].children[8].children[0].textContent);
-//            docketInfo[3] = docketInfo[3].concat(rows[i].children[11].textContent);
+            var docket = rows[i].children[1].textContent;
+            aDockets.push(docket);
         }
-        return docketInfo;
-    }, aDocketInfo);
-    
-    //if (this.exists("a[href*='casePager$ctl07']") && !casper.cli.has("limit"))
-    //{
-    //    // call the next page button
-    //    casper.evaluate(function() {
-    //        setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
-    //     });
-    //    casper.wait(3000);
-    //    casper.then(getCaseInformationMDJ);
-//    }
+        return aDockets;
+    });
+    Array.prototype.push.apply(aDocketInfo[0],dockets);
+    var tmpStatus = casper.getElementsInfo("span[id$='Label4']");
+    var tmpOTN = casper.getElementsInfo("span[id$='Label6']");
+    aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));
+    aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));
+
+    utils.dump(aDocketInfo);
+//    var tmpDOB = casper.getElementsInfo("span[id$='Label6']");
+    if (this.exists("a[href*='cstPager$ctl07']") && !casper.cli.has("limit"))
+    {
+        // call the next page button
+        casper.evaluate(function() {
+           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
+        });
+        casper.wait(3000);
+        casper.then(getCaseInformationMDJ);
+    }
 }
 
 function printPipes(data) {
@@ -322,7 +326,7 @@ casper.waitForSelector("div[id='"+resultsContainer+"']",
     function getDocketNumbers()  {
         if (casper.cli.has("chatty")) console.log("Dockets have been found ... now scraping dockets ....")
 
-        var aDocketInfo = new Array();
+        //var aDocketInfo = new Array();
         if (mdj)
             casper.then(getCaseInformationMDJ);
         else
