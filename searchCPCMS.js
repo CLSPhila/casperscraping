@@ -9,7 +9,11 @@ var casper = require('casper').create()
 casper.options.verbose = true;
 casper.options.logLeval = "debug";
 
-
+// for debugging.  Should be commented out in production
+casper.on('remote.message', function(msg) {
+  this.echo(msg);
+});
+  
 // test data, overwritten if there is input to the script
 var nameInfo = {lastName: "Smith",
                 firstName: "John",
@@ -27,6 +31,7 @@ var buttonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent
 var searchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$searchTypeListControl";
 var participantSelect = "Aopc.Cp.Views.DocketSheets.IParticipantSearchView, CPCMSApplication, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null";
 var docketNumberLabelId = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_caseList_ctl00_ctl00_docketNumberLabel"
+var resultsContainer = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel";
 docketWebsite = "https://ujsportal.pacourts.us/DocketSheets/CP.aspx#";
 
 
@@ -39,6 +44,7 @@ var mdjNameControls = {lastName: "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cp
 var mdjButtonField = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$btnSearch";
 var mdjSearchTypeListControl = "ctl00$ctl00$ctl00$cphMain$cphDynamicContent$ddlSearchType";
 var mdjParticipantSelect = "ParticipantName";
+var mdjResultsContainer = "ctl00_ctl00_ctl00_cphMain_cphDynamicContent_SearchResultsPanel";
 var mdjDocketWebsite = "https://ujsportal.pacourts.us/DocketSheets/MDJ.aspx";
 
 
@@ -113,16 +119,20 @@ function getCaseInformation()
 function getCaseInformationMDJ()
 {
     casper.echo("In here");
-    // find all of the docketnumbers, statuses, OTNs and DOBs; id$= is a wildcard search that finds any id ending with docketNumberLable
-    //var tmpDocketNumbers =casper.getElementsInfo("span[id$='docketNumberLabel']");
-    //var tmpStatus = casper.getElementsInfo("span[id$='caseStatusNameLabel']");
-    //var tmpOTN = casper.getElementsInfo("span[id$='otnLabel']");
-    //var tmpDOB = casper.getElementsInfo("span[id$='primaryParticipantDobLabel']");
-    //aDocketInfo[0] = aDocketInfo[0].concat(tmpDocketNumbers.map(function(value,index) { return value['text'];}));
-    //aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));
-    //aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));
-    //aDocketInfo[3] = aDocketInfo[3].concat(tmpDOB.map(function(value,index) { return value['text'];}));
-
+    var aDocketInfo = casper.evaluate(function getDocketInfo(docketInfo) 
+    {
+        var rows = __utils__.findAll("tr[class='gridViewRow']");
+        for (var i=0; i < rows.length; i++) 
+        {
+            __utils__.echo(i);
+            docketInfo[0] = docketInfo[0].concat(rows[i].children[1].textContent);
+            docketInfo[1] = docketInfo[1].concat(rows[i].children[6].children[0].textContent);
+            docketInfo[2] = docketInfo[2].concat(rows[i].children[8].children[0].textContent);
+//            docketInfo[3] = docketInfo[3].concat(rows[i].children[11].textContent);
+        }
+        return docketInfo;
+    }, aDocketInfo);
+    
     //if (this.exists("a[href*='casePager$ctl07']") && !casper.cli.has("limit"))
     //{
     //    // call the next page button
@@ -130,7 +140,7 @@ function getCaseInformationMDJ()
     //        setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cphDynamicContent$participantCriteriaControl$searchResultsGridControl$casePager$ctl07\',\'\')', 0);
     //     });
     //    casper.wait(3000);
-    //    casper.then(getCaseInformation);
+    //    casper.then(getCaseInformationMDJ);
 //    }
 }
 
@@ -215,6 +225,7 @@ if (casper.cli.has("mdj"))
     searchTypeListControl = mdjSearchTypeListControl;
     nameControls = mdjNameControls;
     buttonField = mdjButtonField;
+    resultsContainer = mdjResultsContainer;
 }
 if (casper.cli.has("chatty"))
 {
@@ -240,15 +251,25 @@ casper.start(docketWebsite, function() {
         this.emit("aopcSite.error");
         return
     }
-    this.evaluate(function changeToParticipant(fieldName) {
-        var element = jQuery("[name='"+fieldName+"']");
-        var selectedElement = jQuery("option:selected", element).removeAttr("selected");
-        var participantElement = jQuery("option:contains('Participant')",element);
-        participantElement.attr("selected","selected");
-        __utils__.echo(participantElement);
-        __utils__.echo(element.serialize());
-        setTimeout('__doPostBack(\''+fieldName+'\',\'\')',0);
-    }, searchTypeListControl);//end of this.evaluate
+    
+    if (mdj)
+    {
+        this.evaluate(function changeToParticipant(fieldName) {
+            var element = jQuery("[name='"+fieldName+"']");
+            element.val('ParticipantName').change();        
+            setTimeout('__doPostBack(\''+fieldName+'\',\'\')',0);
+        }, searchTypeListControl);//end this.evealuate
+     }
+     else
+     {
+        this.evaluate(function changeToParticipant(fieldName) {
+            var element = jQuery("[name='"+fieldName+"']");
+            var selectedElement = jQuery("option:selected", element).removeAttr("selected");
+            var participantElement = jQuery("option:contains('Participant')",element);
+            participantElement.attr("selected","selected");
+            setTimeout('__doPostBack(\''+fieldName+'\',\'\')',0);
+        }, searchTypeListControl);//end of this.evaluate
+     }
  });//end of casper.start
 
 
@@ -256,12 +277,10 @@ casper.start(docketWebsite, function() {
 casper.waitForSelector("[name='"+nameControls.firstName+"']", function() {
     if (this.exists("[name='"+nameControls.lastName+"']")) {
         casper.log("Participant name selected ... entering name information ... ", "info");
-        casper.echo("123");
     } else {
-        casper.echo("123912912929");
         this.log("Cannot find entry boxes for participant name information","error");
         this.emit("aopcSite.error");
-        return
+        return;
         //throw new Error("Cannot find Participant Name form");
     }
 
@@ -299,14 +318,13 @@ this.exit();
 });//end of casper.waitForSelector
 
 
-
-casper.waitForSelector("div[id='ctl00_ctl00_ctl00_cphMain_cphDynamicContent_cphDynamicContent_participantCriteriaControl_searchResultsGridControl_resultsPanel']",
+casper.waitForSelector("div[id='"+resultsContainer+"']",
     function getDocketNumbers()  {
         if (casper.cli.has("chatty")) console.log("Dockets have been found ... now scraping dockets ....")
 
         var aDocketInfo = new Array();
         if (mdj)
-            casper.ten(getCaseInformationMDJ);
+            casper.then(getCaseInformationMDJ);
         else
             casper.then(getCaseInformation);
 
