@@ -13,6 +13,13 @@ casper.options.logLeval = "debug";
 casper.on('remote.message', function(msg) {
   this.echo(msg);
 });
+casper.on('resource.error', function(msg) {
+  utils.dump(msg);
+});
+casper.on('page.error', function(msg) {
+  utils.dump(msg);
+});
+
   
 // test data, overwritten if there is input to the script
 var nameInfo = {lastName: "Smith",
@@ -140,9 +147,13 @@ function getCaseInformationMDJ()
     if (this.exists("a[href*='cstPager$ctl07']") && !casper.cli.has("limit"))
     {
         // call the next page button
-        casper.evaluate(function() {
-           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
-        });
+        //casper.click("a[href*='cstPager$ctl07']");
+        casper.clickLabel("2", "a");
+        //casper.debugHTML();
+        //casper.capture('out.png');
+//        casper.evaluate(function() {
+//           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
+//        });
         casper.wait(3000);
         casper.then(getCaseInformationMDJ);
     }
