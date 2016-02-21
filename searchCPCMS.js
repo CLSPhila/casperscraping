@@ -3,9 +3,14 @@
 // second, there is a problem in MDJ once you search--there is no span around the DOB or the docket number
 // so I have to find a different way to find those fields.  Why is this so much diffeernt than CP search?
 
-
+var fs = require("fs");
 var utils = require('utils');
-var casper = require('casper').create()
+var casper = require('casper').create({
+    viewportSize: {
+          width: 1920,
+          height: 1080
+        }
+})
 casper.options.verbose = true;
 casper.options.logLevel = "debug";
 
@@ -123,8 +128,19 @@ function getCaseInformation()
 }
 
 casper.on("error", function(error) {
-    this.echo("Caught an Error:")
+    this.echo("Error:")
     this.echo(error.errorString)
+})
+
+casper.on("resource.requested", function(requestData, networkRequest) {
+    this.echo("request identified.");
+    this.echo("request method: " + requestData.method);
+    if (requestData.method==="POST") {
+        this.echo("AHA! A POST request. Save yourself!");
+        fs.write("tests/output/request_" + requestData.id, JSON.stringify(requestData));
+    } else {
+        this.echo("I don't care about no stinking GET request.")
+    }
 })
 
 // get case information from all of the MDJ cases
@@ -162,10 +178,10 @@ function getCaseInformationMDJ()
         //casper.capture('out.png');
         casper.evaluate(function() {
            console.log("clicking NOW");
-           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',10);
+           setTimeout('__doPostBack(\'ctl00%24ctl00%24ctl00%24cphMain%24cphDynamicContent%24cstPager%24ctl07\',\'\')',0);
+           //setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
         });
         casper.wait(3000);
-        casper.capture("001.png");
         casper.then(getCaseInformationMDJ);
     }
 }
