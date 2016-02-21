@@ -7,7 +7,7 @@
 var utils = require('utils');
 var casper = require('casper').create()
 casper.options.verbose = true;
-casper.options.logLeval = "debug";
+casper.options.logLevel = "debug";
 
 // for debugging.  Should be commented out in production
 casper.on('remote.message', function(msg) {
@@ -122,6 +122,11 @@ function getCaseInformation()
     }
 }
 
+casper.on("error", function(error) {
+    this.echo("Caught an Error:")
+    this.echo(error.errorString)
+})
+
 // get case information from all of the MDJ cases
 function getCaseInformationMDJ()
 {
@@ -149,15 +154,18 @@ function getCaseInformationMDJ()
     utils.dump(aDocketInfo);
     if (this.exists("a[href*='cstPager$ctl07']") && !casper.cli.has("limit"))
     {
+        this.echo("Let's try clicking the next button:");
         // call the next page button
-        //casper.click("a[href*='cstPager$ctl07']");
-        casper.clickLabel("2", "a");
+        //this.click("a[href*='cstPager$ctl07']");
+        //casper.clickLabel("2", "a");
         //casper.debugHTML();
         //casper.capture('out.png');
-//        casper.evaluate(function() {
-//           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
-//        });
+        casper.evaluate(function() {
+           console.log("clicking NOW");
+           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',10);
+        });
         casper.wait(3000);
+        casper.capture("001.png");
         casper.then(getCaseInformationMDJ);
     }
 }
