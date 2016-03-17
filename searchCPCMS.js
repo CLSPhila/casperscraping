@@ -151,13 +151,18 @@ function getCaseInformationMDJ()
     {
         // call the next page button
         //casper.click("a[href*='cstPager$ctl07']");
-        casper.clickLabel("2", "a");
+        //casper.clickLabel("2", "a");
         //casper.debugHTML();
         //casper.capture('out.png');
+        casper.evaluate(function() {
+            var el = jQuery('a[href*="ctl07"]');
+            if (el !== null)
+                el[0].click();
+        });
 //        casper.evaluate(function() {
 //           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
 //        });
-        casper.wait(3000);
+        casper.wait(10000);
         casper.then(getCaseInformationMDJ);
     }
 }
