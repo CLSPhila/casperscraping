@@ -3,11 +3,16 @@
 // second, there is a problem in MDJ once you search--there is no span around the DOB or the docket number
 // so I have to find a different way to find those fields.  Why is this so much diffeernt than CP search?
 
-
+var fs = require("fs");
 var utils = require('utils');
-var casper = require('casper').create()
+var casper = require('casper').create({
+    viewportSize: {
+          width: 1920,
+          height: 1080
+        }
+})
 casper.options.verbose = true;
-casper.options.logLeval = "debug";
+casper.options.logLevel = "debug";
 
 // for debugging.  Should be commented out in production
 casper.on('remote.message', function(msg) {
@@ -122,6 +127,22 @@ function getCaseInformation()
     }
 }
 
+casper.on("error", function(error) {
+    this.echo("Error:")
+    this.echo(error.errorString)
+})
+
+casper.on("resource.requested", function(requestData, networkRequest) {
+    this.echo("request identified.");
+    this.echo("request method: " + requestData.method);
+    if (requestData.method==="POST") {
+        this.echo("AHA! A POST request. Save yourself!");
+        fs.write("tests/output/request_" + requestData.id, JSON.stringify(requestData));
+    } else {
+        //this.echo("I don't care about no stinking GET request.")
+    }
+})
+
 // get case information from all of the MDJ cases
 function getCaseInformationMDJ()
 {
@@ -149,6 +170,7 @@ function getCaseInformationMDJ()
     utils.dump(aDocketInfo);
     if (this.exists("a[href*='cstPager$ctl07']") && !casper.cli.has("limit"))
     {
+        this.echo("Let's try clicking the next button:");
         // call the next page button
         //casper.click("a[href*='cstPager$ctl07']");
         //casper.clickLabel("2", "a");

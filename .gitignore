@@ -2,3 +2,4 @@
 *.png
 *.html
 *.csv
+tests/output/request_*
