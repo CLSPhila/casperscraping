@@ -11,10 +11,11 @@ var casper = require('casper').create({
           height: 1080
         }
 })
-casper.options.verbose = true;
+casper.options.verbose = false;
 casper.options.logLevel = "debug";
 
 // for debugging.  Should be commented out in production
+/*
 casper.on('remote.message', function(msg) {
   this.echo(msg);
 });
@@ -25,6 +26,23 @@ casper.on('page.error', function(msg) {
   utils.dump(msg);
 });
 
+casper.on("error", function(error) {
+    this.echo("Error:")
+    this.echo(error.errorString)
+})
+
+casper.on("resource.requested", function(requestData, networkRequest) {
+    this.echo("request identified.");
+    this.echo("request method: " + requestData.method);
+    if (requestData.method==="POST") {
+        this.echo("AHA! A POST request. Save yourself!");
+        fs.write("tests/output/request_" + requestData.id, JSON.stringify(requestData));
+    } else {
+        //this.echo("I don't care about no stinking GET request.")
+    }
+})
+
+*/
   
 // test data, overwritten if there is input to the script
 var nameInfo = {lastName: "Smith",
@@ -127,22 +145,6 @@ function getCaseInformation()
     }
 }
 
-casper.on("error", function(error) {
-    this.echo("Error:")
-    this.echo(error.errorString)
-})
-
-casper.on("resource.requested", function(requestData, networkRequest) {
-    this.echo("request identified.");
-    this.echo("request method: " + requestData.method);
-    if (requestData.method==="POST") {
-        this.echo("AHA! A POST request. Save yourself!");
-        fs.write("tests/output/request_" + requestData.id, JSON.stringify(requestData));
-    } else {
-        //this.echo("I don't care about no stinking GET request.")
-    }
-})
-
 // get case information from all of the MDJ cases
 function getCaseInformationMDJ()
 {
@@ -167,24 +169,12 @@ function getCaseInformationMDJ()
     aDocketInfo[1] = aDocketInfo[1].concat(tmpStatus.map(function(value,index) { return value['text'];}));
     aDocketInfo[2] = aDocketInfo[2].concat(tmpOTN.map(function(value,index) { return value['text'];}));
 
-    utils.dump(aDocketInfo);
     if (this.exists("a[href*='cstPager$ctl07']") && !casper.cli.has("limit"))
     {
-        this.echo("Let's try clicking the next button:");
-        // call the next page button
-        //casper.click("a[href*='cstPager$ctl07']");
-        //casper.clickLabel("2", "a");
-        //casper.debugHTML();
-        //casper.capture('out.png');
         casper.evaluate(function() {
-            var el = jQuery('a[href*="ctl07"]');
-            if (el !== null)
-                el[0].click();
+           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
         });
-//        casper.evaluate(function() {
-//           setTimeout('__doPostBack(\'ctl00$ctl00$ctl00$cphMain$cphDynamicContent$cstPager$ctl07\',\'\')',0);
-//        });
-        casper.wait(10000);
+        casper.wait(3000);
         casper.then(getCaseInformationMDJ);
     }
 }
@@ -347,7 +337,7 @@ casper.waitForSelector("[name='"+nameControls.firstName+"']", function() {
         var endDateSelector = "input[name='"+aEndField+"']";
         jQuery(startDateSelector).val("01/01/1950");
         var date = new Date();
-        sDate = (date.getMonth()+1) + "/" + date.getDate() + "/" + date.getFullYear();
+        sDate = ('0'+(date.getMonth()+1)).slice(-2) + "/" + ('0'+date.getDate()).slice(-2) + "/" + date.getFullYear();
         jQuery(endDateSelector).val(sDate);
 
         // find and click the submit button
