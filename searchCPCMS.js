@@ -41,8 +41,9 @@ casper.on("resource.requested", function(requestData, networkRequest) {
         //this.echo("I don't care about no stinking GET request.")
     }
 })
-
+/* comment out to the line below this /*********
 */
+
   
 // test data, overwritten if there is input to the script
 var nameInfo = {lastName: "Smith",
@@ -177,6 +178,29 @@ function getCaseInformationMDJ()
         casper.wait(3000);
         casper.then(getCaseInformationMDJ);
     }
+}
+
+function removeOdiousMDJInformation()
+{
+    // remove all of the docket numbers that aren't NT or CR dockets
+    // because we generally don't care about these
+
+    var dockets = aDocketInfo[0];
+    for (var i=dockets.length-1; i>=0; i--)
+    {
+        var re = /-(NT|CR)-/;
+//        casper.echo(dockets[i]);
+        if (re.exec(dockets[i]) === null)
+        {
+            // this is a match of a non-NT or CR docket, so we want to remove it from the array
+            aDocketInfo[0].splice(i,1);
+            aDocketInfo[1].splice(i,1);
+            aDocketInfo[2].splice(i,1);
+            aDocketInfo[3].splice(i,1);
+            
+        }
+    }
+    
 }
 
 function printPipes(data) {
@@ -362,7 +386,6 @@ casper.waitForSelector("div[id='"+resultsContainer+"']",
             casper.then(getCaseInformationMDJ);
         else
             casper.then(getCaseInformation);
-
     }, //end of waitForSelector then function)
     function() {
         console.log("No dockets were found.  Either there are none to find or something is broken.");
@@ -375,6 +398,8 @@ casper.waitForSelector("div[id='"+resultsContainer+"']",
 
 
 casper.run(function() {
+    if (mdj)
+        removeOdiousMDJInformation();
     scrapeResults.dockets = objectifyDockets(aDocketInfo[0],aDocketInfo[1],aDocketInfo[2],aDocketInfo[3])
     if (scrapeResults.dockets.length===0) {
         scrapeResults.statusCode = statusCodes.noDocketsFound

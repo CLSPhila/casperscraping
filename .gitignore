@@ -3,3 +3,4 @@
 *.html
 *.csv
 tests/output/request_*
+tests/
