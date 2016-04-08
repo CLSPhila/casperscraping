@@ -388,7 +388,7 @@ casper.waitForSelector("div[id='"+resultsContainer+"']",
             casper.then(getCaseInformation);
     }, //end of waitForSelector then function)
     function() {
-        console.log("No dockets were found.  Either there are none to find or something is broken.");
+        if (casper.cli.has("chatty")) console.log("No dockets were found.  Either there are none to find or something is broken.");
         scrapeResults.statusCode = statusCodes.noDocketsFound
         this.emit('aopcSite.error');
     }, //end of waitForSelector onTimout function
