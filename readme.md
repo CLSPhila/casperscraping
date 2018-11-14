@@ -6,6 +6,12 @@ criminal records docket information.
 ## Usage
 
 ```
+casperjs searchCPCMS.js --mdj --first=John --last=Smith --DOB=05/15/1990 --chatty
+```
+
+The `=` is required.
+
+```
     me$ casperjs searchCPCMS.js --helpMe
     This script navigates the AOPC website automatically.
     It requires that you provide a first and last name and, optionally, a DOB.

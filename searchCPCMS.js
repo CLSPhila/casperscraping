@@ -206,26 +206,22 @@ function getCaseInformation() {
 
 // get case information from all of the MDJ cases
 function getCaseInformationMDJ() {
-    console.log("getting mdj info");
     var dockets = casper.evaluate(function getDocketInfo() {
-        console.log("evaluating some things.");
         var rows = __utils__.findAll("tr[class='gridViewRow']");
         var aDockets = [new Array(), new Array()];
         for (var i = 0; i < rows.length; i++) {
             var docket = rows[i].children[1].textContent;
-            console.log("found docket " + docket);
             var DOB = rows[i].lastElementChild.getElementsByTagName("span")[0]
                 .textContent;
-            console.log("found dob " + dob);
             aDockets[0].push(docket);
             aDockets[1].push(DOB);
         }
-        console.log("returning aDockets:" + aDockets);
         return aDockets;
     });
     Array.prototype.push.apply(aDocketInfo[0], dockets[0]);
     Array.prototype.push.apply(aDocketInfo[3], dockets[1]);
     try {
+        casper.capture("../capture.png");
         var tmpStatus = casper.getElementsInfo("span[id$='Label4']");
         var tmpOTN = casper.getElementsInfo("span[id$='Label6']");
         var tmpDOB = casper.getElementsInfo("span[id$='Label6']");
@@ -238,8 +234,6 @@ function getCaseInformationMDJ() {
         var tmpDOB = [];
         var tmpURL = [];
     }
-    console.log("tmpURL");
-    console.log(tmpURL);
     aDocketInfo[1] = aDocketInfo[1].concat(
         tmpStatus.map(function(value, index) {
             return value["text"];
